@@ -28,9 +28,10 @@ df$interval <- sprintf("%04d", df$interval)
 
 ```{r sumsteps}
 total_steps_by_day <- tapply(df$steps, df$date, FUN = sum, na.rm = TRUE)
-hist(total_steps_by_day, breaks = 
+histogram(total_steps_by_day, breaks = 
              seq(0, max(total_steps_by_day) + 2000, by = 2000), 
-     xlab = "Total number of steps in a day", main = "Histogram of steps by day")
+     xlab = "Total number of steps in a day", 
+     main = "Histogram of steps by day")
 mean(total_steps_by_day)
 median(total_steps_by_day)
 ```
@@ -46,6 +47,8 @@ for (x in interval_val) {
         mean_steps_by_time[x,] = 
                 mean(subset(df, interval == x)$steps, na.rm = TRUE)
 }
+
+# Reformatting data frame to make it compatible for lattice.
 
 plot(x = rownames(mean_steps_by_time), y = mean_steps_by_time[,1], type = "l")
 ```
@@ -77,7 +80,7 @@ for (x in which(is.na(filled_df$steps))) {
 
 total_filled_steps_by_day <- 
         tapply(filled_df$steps, filled_df$date, FUN = sum, na.rm = FALSE)
-hist(total_filled_steps_by_day, breaks = 
+histogram(total_filled_steps_by_day, breaks = 
              seq(0, max(total_filled_steps_by_day) + 2000, by = 2000), 
      xlab = "Total number of steps in a day", 
      main = "Histogram of steps by day, with missing data imputed")
