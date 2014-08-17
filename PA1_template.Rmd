@@ -98,25 +98,42 @@ filled_df$weekday <- as.factor(ifelse(weekdays(filled_df$date) %in% weekends,
 ```
 
 
-```{r meantimeweekday}
+```{r meantimeweekday, fig.height = 8}
 mean_steps_by_time_weekday <- data.frame(row.names = interval_val, 
                                  steps_weekday = as.numeric(
                                          rep(NA, length(interval_val))),
                                  steps_weekend = as.numeric(
                                          rep(NA, length(interval_val))))
+
+## Need to clean this up later.
 for (x in interval_val) {
         mean_steps_by_time_weekday[x,]$steps_weekday = 
                 mean(subset(filled_df, interval == x 
                             & weekday == "Weekday")$steps, na.rm = FALSE)
         mean_steps_by_time_weekday[x,]$steps_weekend = 
                 mean(subset(filled_df, interval == x 
-                            & weekday == "Weekend")$steps, na.rm = FALSE)       
+                            & weekday == "Weekend")$steps, na.rm = FALSE)    
 }
 
-plot(x = rownames(mean_steps_by_time_weekday), 
-     y = mean_steps_by_time_weekday$steps_weekday, 
-     type = "l", col = "red")
-lines(x = rownames(mean_steps_by_time_weekday), 
-      y = mean_steps_by_time_weekday$steps_weekend, 
-      type = "l", col = "blue")
+## Create new data frame with weekday and weekend steps in one column, 
+## with factor to distinguis them. Need this to use lattice.
+
+mean_steps_by_time_weekday2 <- 
+        data.frame(interval = rownames(mean_steps_by_time_weekday), 
+                   steps = mean_steps_by_time_weekday$steps_weekday, 
+                   day = rep("Weekday", 288))
+
+mean_steps_by_time_weekday3 <- 
+        rbind(mean_steps_by_time_weekday2, 
+              data.frame(interval = rownames(mean_steps_by_time_weekday), 
+                         steps = mean_steps_by_time_weekday$steps_weekend, 
+                         day = rep("Weekend", 288)))
+
+label_list <- list(at = seq(strptime("0000", format = "%H%M"), 
+                            by = "6 hour", length = 5), 
+                   labels = format(seq(strptime("0000", format = "%H%M"), 
+                                       by = "6 hour", length = 5), "%H:%M"))
+
+xyplot(steps ~ interval | day, data = mean_steps_by_time_weekday3, 
+       layout = c(1,2), type = "l", scales = list(x = label_list))
 ```
