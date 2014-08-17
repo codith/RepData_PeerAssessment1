@@ -28,15 +28,20 @@ df$interval <- sprintf("%04d", df$interval)
 
 ## What is mean total number of steps taken per day?
 
+First, sum up the steps taken each day, ignoring missing values. Those are presented on a histogram
+
 
 ```r
 total_steps_by_day <- tapply(df$steps, df$date, FUN = sum, na.rm = TRUE)
-hist(total_steps_by_day, breaks = 
+histogram(total_steps_by_day, breaks = 
              seq(0, max(total_steps_by_day) + 2000, by = 2000), 
-     xlab = "Total number of steps in a day", main = "Histogram of steps by day")
+     xlab = "Total number of steps in a day", 
+     main = "Histogram of steps by day")
 ```
 
 ![plot of chunk sumsteps](figure/sumsteps.png) 
+
+Calculate the mean number of steps.
 
 ```r
 mean(total_steps_by_day)
@@ -46,6 +51,8 @@ mean(total_steps_by_day)
 ## [1] 9354
 ```
 
+And the median.
+
 ```r
 median(total_steps_by_day)
 ```
@@ -54,7 +61,11 @@ median(total_steps_by_day)
 ## [1] 10395
 ```
 
+
 ## What is the average daily activity pattern?
+
+Create a list containing the intervals in character format. Then calculate the mean number of steps taken in those intervals, with missing values ignored. The result is plotted vs. time.
+
 
 
 ```r
@@ -67,7 +78,7 @@ for (x in interval_val) {
                 mean(subset(df, interval == x)$steps, na.rm = TRUE)
 }
 
-plot(x = rownames(mean_steps_by_time), y = mean_steps_by_time[,1], type = "l")
+plot(x = rownames(mean_steps_by_time), y = mean_steps_by_time[,1], type = "l", xlab = "time interval", ylab = "mean number of steps")
 ```
 
 ![plot of chunk meantime](figure/meantime.png) 
@@ -96,6 +107,8 @@ sum(is.na(df$steps))
 ## [1] 2304
 ```
 
+We create a duplicate data frame to fill in. If the number of steps during an interval is unknown, the average for that time of day is used.
+
 
 ```r
 # Duplicate df.
@@ -106,17 +119,22 @@ for (x in which(is.na(filled_df$steps))) {
         filled_df[x,]$steps <- 
                 as.integer(mean_steps_by_time[filled_df[x,]$interval,])
 }
+```
 
+Calcluate again the new total number of steps per day, this time with missing values imputed from the average for that time interval.
 
+```r
 total_filled_steps_by_day <- 
         tapply(filled_df$steps, filled_df$date, FUN = sum, na.rm = FALSE)
-hist(total_filled_steps_by_day, breaks = 
+histogram(total_filled_steps_by_day, breaks = 
              seq(0, max(total_filled_steps_by_day) + 2000, by = 2000), 
      xlab = "Total number of steps in a day", 
      main = "Histogram of steps by day, with missing data imputed")
 ```
 
-![plot of chunk fillna](figure/fillna.png) 
+![plot of chunk unnamed-chunk-3](figure/unnamed-chunk-3.png) 
+
+Calculate the mean number of steps with the imputed data.
 
 ```r
 mean(total_filled_steps_by_day)
@@ -126,6 +144,8 @@ mean(total_filled_steps_by_day)
 ## [1] 10750
 ```
 
+And the median.
+
 ```r
 median(total_filled_steps_by_day)
 ```
@@ -134,6 +154,7 @@ median(total_filled_steps_by_day)
 ## [1] 10641
 ```
 
+Both values are somewhat increased.
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
@@ -141,11 +162,13 @@ median(total_filled_steps_by_day)
 First, add in the day of the week to the data frame.
 
 ```r
+# Maybe could have done this to begin. Fix later.
 weekends <- c("Saturday", "Sunday")
 filled_df$weekday <- as.factor(ifelse(weekdays(filled_df$date) %in% weekends, 
                                "Weekend", "Weekday"))
 ```
 
+First calculate the mean number of steps per time interval, split between weekdays and weekend days. Those values are plotted.
 
 
 ```r
@@ -154,21 +177,40 @@ mean_steps_by_time_weekday <- data.frame(row.names = interval_val,
                                          rep(NA, length(interval_val))),
                                  steps_weekend = as.numeric(
                                          rep(NA, length(interval_val))))
+
+## Need to clean this up later.
 for (x in interval_val) {
         mean_steps_by_time_weekday[x,]$steps_weekday = 
                 mean(subset(filled_df, interval == x 
                             & weekday == "Weekday")$steps, na.rm = FALSE)
         mean_steps_by_time_weekday[x,]$steps_weekend = 
                 mean(subset(filled_df, interval == x 
-                            & weekday == "Weekend")$steps, na.rm = FALSE)       
+                            & weekday == "Weekend")$steps, na.rm = FALSE)    
 }
 
-plot(x = rownames(mean_steps_by_time_weekday), 
-     y = mean_steps_by_time_weekday$steps_weekday, 
-     type = "l", col = "red")
-lines(x = rownames(mean_steps_by_time_weekday), 
-      y = mean_steps_by_time_weekday$steps_weekend, 
-      type = "l", col = "blue")
+## Create new data frame with weekday and weekend steps in one column, 
+## with factor to distinguis them. Need this to use lattice.
+
+mean_steps_by_time_weekday2 <- 
+        data.frame(interval = rownames(mean_steps_by_time_weekday), 
+                   steps = mean_steps_by_time_weekday$steps_weekday, 
+                   day = rep("Weekday", 288))
+
+mean_steps_by_time_weekday3 <- 
+        rbind(mean_steps_by_time_weekday2, 
+              data.frame(interval = rownames(mean_steps_by_time_weekday), 
+                         steps = mean_steps_by_time_weekday$steps_weekend, 
+                         day = rep("Weekend", 288)))
+
+# Need a label list to sent to lattice.
+
+label_list <- list(at = seq(strptime("0000", format = "%H%M"), 
+                            by = "6 hour", length = 5), 
+                   labels = format(seq(strptime("0000", format = "%H%M"), 
+                                       by = "6 hour", length = 5), "%H:%M"))
+
+xyplot(steps ~ interval | day, data = mean_steps_by_time_weekday3, 
+       layout = c(1,2), type = "l", scales = list(x = label_list))
 ```
 
 ![plot of chunk meantimeweekday](figure/meantimeweekday.png) 

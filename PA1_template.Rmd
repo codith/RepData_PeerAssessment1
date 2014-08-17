@@ -26,17 +26,31 @@ df$interval <- sprintf("%04d", df$interval)
 
 ## What is mean total number of steps taken per day?
 
+First, sum up the steps taken each day, ignoring missing values. Those are presented on a histogram
+
 ```{r sumsteps}
 total_steps_by_day <- tapply(df$steps, df$date, FUN = sum, na.rm = TRUE)
 histogram(total_steps_by_day, breaks = 
              seq(0, max(total_steps_by_day) + 2000, by = 2000), 
      xlab = "Total number of steps in a day", 
      main = "Histogram of steps by day")
+```
+
+Calculate the mean number of steps.
+```{r}
 mean(total_steps_by_day)
+```
+
+And the median.
+```{r}
 median(total_steps_by_day)
 ```
 
+
 ## What is the average daily activity pattern?
+
+Create a list containing the intervals in character format. Then calculate the mean number of steps taken in those intervals, with missing values ignored. The result is plotted vs. time.
+
 
 ```{r meantime}
 interval_val <- unique(df$interval)
@@ -48,9 +62,7 @@ for (x in interval_val) {
                 mean(subset(df, interval == x)$steps, na.rm = TRUE)
 }
 
-# Reformatting data frame to make it compatible for lattice.
-
-plot(x = rownames(mean_steps_by_time), y = mean_steps_by_time[,1], type = "l")
+plot(x = rownames(mean_steps_by_time), y = mean_steps_by_time[,1], type = "l", xlab = "time interval", ylab = "mean number of steps")
 ```
 
 The maximum mean steps is at time:
@@ -67,6 +79,8 @@ There are this many intervals with missing values:
 sum(is.na(df$steps))
 ```
 
+We create a duplicate data frame to fill in. If the number of steps during an interval is unknown, the average for that time of day is used.
+
 ```{r fillna}
 # Duplicate df.
 filled_df <- df
@@ -76,30 +90,42 @@ for (x in which(is.na(filled_df$steps))) {
         filled_df[x,]$steps <- 
                 as.integer(mean_steps_by_time[filled_df[x,]$interval,])
 }
+```
 
-
+Calcluate again the new total number of steps per day, this time with missing values imputed from the average for that time interval.
+```{r}
 total_filled_steps_by_day <- 
         tapply(filled_df$steps, filled_df$date, FUN = sum, na.rm = FALSE)
 histogram(total_filled_steps_by_day, breaks = 
              seq(0, max(total_filled_steps_by_day) + 2000, by = 2000), 
      xlab = "Total number of steps in a day", 
      main = "Histogram of steps by day, with missing data imputed")
-mean(total_filled_steps_by_day)
-median(total_filled_steps_by_day)
-
 ```
 
+Calculate the mean number of steps with the imputed data.
+```{r}
+mean(total_filled_steps_by_day)
+```
+
+And the median.
+```{r}
+median(total_filled_steps_by_day)
+```
+
+Both values are somewhat increased.
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
 
 First, add in the day of the week to the data frame.
 ```{r}
+# Maybe could have done this to begin. Fix later.
 weekends <- c("Saturday", "Sunday")
 filled_df$weekday <- as.factor(ifelse(weekdays(filled_df$date) %in% weekends, 
                                "Weekend", "Weekday"))
 ```
 
+First calculate the mean number of steps per time interval, split between weekdays and weekend days. Those values are plotted.
 
 ```{r meantimeweekday, fig.height = 8}
 mean_steps_by_time_weekday <- data.frame(row.names = interval_val, 
@@ -131,6 +157,8 @@ mean_steps_by_time_weekday3 <-
               data.frame(interval = rownames(mean_steps_by_time_weekday), 
                          steps = mean_steps_by_time_weekday$steps_weekend, 
                          day = rep("Weekend", 288)))
+
+# Need a label list to sent to lattice.
 
 label_list <- list(at = seq(strptime("0000", format = "%H%M"), 
                             by = "6 hour", length = 5), 
